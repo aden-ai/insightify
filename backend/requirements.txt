@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+# Replaced 'langchain' with specific packages:
+langchain-openai  # For ChatOpenAI and OpenAIEmbeddings
+langchain-chroma  # For Chroma vector store
+langchain-community # For RetrievalQA
+langchain-core    # For PromptTemplate
+chromadb
+faiss-cpu
+pydantic
+requests
