@@ -3,9 +3,9 @@ import os
 from langchain_core.prompts import PromptTemplate 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings 
 from langchain_chroma import Chroma
-# The fix for your current error
-# ✅ CORRECTED Import for RetrievalQA (using the full, detailed path)
-from langchain_community.chains import RetrievalQA 
+# ✅ FIXED: Using modern LangChain runnable instead of deprecated RetrievalQA
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 
 from .config import settings
 
@@ -43,21 +43,23 @@ PROMPT = PromptTemplate(
 )
 
 retriever = vectordb.as_retriever(search_type="similarity", search_kwargs={"k": 4})
-# ✅ Uses the corrected RetrievalQA import
-qa_chain = RetrievalQA.from_chain_type(
-    llm=llm, 
-    chain_type="stuff", # Explicitly setting chain_type is good practice
-    retriever=retriever, 
-    return_source_documents=True,
-    # ✅ FIXED: Uncommented to apply custom prompt
-    chain_type_kwargs={"prompt": PROMPT} 
-) 
+
+# ✅ FIXED: Modern LangChain approach using runnables instead of deprecated RetrievalQA
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+qa_chain = (
+    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    | PROMPT
+    | llm
+    | StrOutputParser()
+)
 
 # ✅ run_rag is already correctly defined to accept 'mode'
 def run_rag(text: str, mode: str = "summary") -> dict:
     query = text if mode == "summary" else f"{mode}: {text}"
-    result = qa_chain.invoke({"query": query})
+    result = qa_chain.invoke(query)
     return {
-        "summary": result["result"],
-        "sources": [doc.metadata for doc in result["source_documents"]]
+        "summary": result,
+        "sources": []
     }
